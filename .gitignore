@@ -14,6 +14,8 @@ vendor/waypoint-sidebar/node_modules
 注意/
 
 dist
+.wrangler
+.dev.vars
 public/stage-slot/
 dist-ssr
 *.local

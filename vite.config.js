@@ -5,6 +5,7 @@ import { defineConfig } from 'vite'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const stepImgCacheKey =
+  process.env.CF_PAGES_COMMIT_SHA?.slice(0, 12) ||
   process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 12) ||
   process.env.VERCEL_DEPLOYMENT_ID?.slice(0, 12) ||
   ''
