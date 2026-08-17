@@ -1,0 +1,108 @@
+:root {
+  /* Artboard 1920×917 — 120 × 57.3125 rem @ 16px */
+  --canvas-w: 120rem;
+  --canvas-h: 57.3125rem;
+  /* 16:9 stage plate inside the wider chrome — 1360×765 */
+  --luna-center-w: 85rem; /* 1360px — stage */
+  --luna-center-h: 47.8125rem; /* 765px */
+  --luna-center-slot: 1; /* height uses --luna-center-h directly */
+  --luna-header-center-w: 116.625rem; /* 1866px — header center column */
+  --luna-side-section-w: 23rem; /* 368px — steps-info panel */
+  --luna-header-switch-w: 23.625rem; /* 378px — Information / Waypoint Select */
+  --luna-header-switch-h: 2.25rem; /* 36px — buttons + underline */
+  /* Vertically centered in 68px header: (68−36)/2 = 16px from canvas top */
+  --luna-header-switch-top: 1rem;
+  /* Stage placement relative to header + switch/steps dock */
+  --luna-stage-gap-top: 2.3125rem; /* 37px below header */
+  --luna-stage-gap-right: 2.6875rem; /* 43px from switch/steps-info dock */
+  --luna-stage-tool-size: 2.25rem; /* 36px square buttons left of iframe */
+  --luna-stage-tool-gap: 0.5rem; /* 8px between stacked tools */
+
+  /* Pads: header 68px; bottom fills remaining after stage + top gap */
+  --luna-horizontal-pad-top: 4.25rem; /* 68px */
+  /* 917 − 68 − 37 − 765 = 47px */
+  --luna-horizontal-pad-bottom: 2.9375rem; /* 47px */
+  --luna-content-pad-top: 4.5rem;
+
+  --luna-left-col-w: 25.5rem; /* ~0.75 × old 33.875rem */
+  --page-row-otf-footer-h: 0rem; /* footer band lives inside canvas for fixed stage */
+
+  --sidebar-rail-w: 4.6rem;
+  --sidebar-expanded: 37rem;
+  --sans: Inter, system-ui, 'Segoe UI', sans-serif;
+  --text: #6b6375;
+  --text-h: #08060d;
+  --bg: #fff;
+}
+
+html {
+  font-size: 16px;
+  background: #fff;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  touch-action: pan-x pan-y;
+  -webkit-font-smoothing: antialiased;
+}
+
+html.loadscreen-active #root {
+  visibility: hidden;
+}
+
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--sans);
+  background: #fff;
+  color: var(--text);
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+.app-shell {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  background: #fff;
+  opacity: 0;
+  transition: opacity 0.45s ease;
+}
+
+.app-shell.is-ready {
+  opacity: 1;
+}
+
+.luna-root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #fff;
+}
+
+/* Override legacy 90rem row → fixed artboard height */
+.luna-canvas-row {
+  position: relative;
+  flex: 0 0 auto;
+  width: 100%;
+  height: var(--canvas-h);
+  max-height: 100%;
+  overflow: hidden;
+  background-color: #f6f5f4;
+  background-image: url('/bg/wp-bg.png');
+  background-repeat: repeat-x;
+  background-position: center top;
+  background-size: auto 100%;
+}
+
+.luna-footer-slot {
+  display: none; /* Endfield-style single stage; no scroll footer */
+}

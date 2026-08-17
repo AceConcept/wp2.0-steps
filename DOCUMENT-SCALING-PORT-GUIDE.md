@@ -1,15 +1,15 @@
-# Document scaling port guide (2560×1440 artboard)
+# Document scaling port guide (1920×912 artboard)
 
-Portable summary of how **waypoint-v2** constrains layout to a fixed design size and scales it to any viewport. Hand this to another React/Vite (or similar) project when you want the same behavior.
+Portable summary of how this project constrains layout to a fixed design size and scales it to any viewport. (Previously 2560×1440; now **1920×912** — near 1920×917 with clean rem math.)
 
 ---
 
 ## Big idea
 
-Design the UI at a fixed artboard size (**2560×1440 px**). Express that size in **`rem`**, with **16px = 1rem** at scale 1. On resize, compute one **`scale`** factor that fits the artboard into the browser window, then apply it at the **document level**:
+Design the UI at a fixed artboard size (**1920×912 px**). Express that size in **`rem`**, with **16px = 1rem** at scale 1. On resize, compute one **`scale`** factor that fits the artboard into the browser window, then apply it at the **document level**:
 
 - `html { font-size: 16px × scale }` → every `rem` in CSS grows/shrinks
-- `body` is sized to fill the viewport (and scroll when footer/content is taller)
+- `body` fills the viewport with `overflow: hidden` (Endfield-style single stage)
 
 **Do not** use `transform: scale()` on the main shell wrapper unless you have a separate fixed-pixel layer inside a slot. The shell scales via root `rem`.
 
@@ -20,11 +20,11 @@ Design the UI at a fixed artboard size (**2560×1440 px**). Express that size in
 | Token | Value | At scale 1 |
 |-------|-------|------------|
 | `DESIGN_ROOT_PX` | 16 | 1rem = 16px |
-| `DESIGN_REM_W` / `--canvas-w` | 160rem | 2560px |
-| `DESIGN_REM_H` / `--canvas-h` | 90rem | 1440px |
-| `CANVAS_W` | 2560 px | `160 × 16` |
-| `CANVAS_H` | 1440 px | `90 × 16` |
-| `--page-row-otf-footer-h` (optional) | 48rem | 768px |
+| `DESIGN_REM_W` / `--canvas-w` | 120rem | 1920px |
+| `DESIGN_REM_H` / `--canvas-h` | 57rem | 912px |
+| `CANVAS_W` | 1920 px | `120 × 16` |
+| `CANVAS_H` | 912 px | `57 × 16` |
+| Center stage (16:9) | 85×47.8125 rem | 1360×765 |
 
 **CSS (`:root` or design tokens file):**
 
@@ -200,10 +200,9 @@ Inner iframe/artboard content should fill its slot at `width/height: 100%`. Avoi
 ## Minimal copy-paste starter
 
 ```js
-const CANVAS_W = 2560
-const CANVAS_H = 1440
+const CANVAS_W = 1920
+const CANVAS_H = 912
 const ROOT_PX = 16
-const FOOTER_H = 768 // 48rem × 16, or 0
 
 function getScale(viewportW, viewportH) {
   return Math.min(viewportW / CANVAS_W, viewportH / CANVAS_H)
@@ -211,10 +210,9 @@ function getScale(viewportW, viewportH) {
 
 function applyDocumentScale(scale, viewport) {
   document.documentElement.style.fontSize = `${ROOT_PX * scale}px`
-  const contentH = CANVAS_H * scale + FOOTER_H * scale
   document.body.style.width = `${viewport.width}px`
-  document.body.style.minHeight = `${viewport.height}px`
-  document.body.style.height = `${Math.max(contentH, viewport.height)}px`
+  document.body.style.height = `${viewport.height}px`
+  document.body.style.overflow = 'hidden'
 }
 
 function onResize() {
@@ -225,6 +223,27 @@ function onResize() {
 window.addEventListener('resize', onResize)
 onResize()
 ```
+
+---
+
+## Files in this repo (vanilla Endfield-style)
+
+| File | Purpose |
+|------|---------|
+| `src/scale.js` | Artboard constants + contain rem scaler |
+| `src/main.js` | State, HTML templates, mount/patch, events |
+| `src/styles/tokens.css` | `--canvas-w/h`, center stage, pads |
+| `src/styles/chrome.css` | Shell layout |
+| `_legacy-react-src/` | Previous React implementation (reference) |
+
+## Quick DevTools verification
+
+On a **1920×912** window:
+
+1. `<html>` computed `font-size` should be **16px**.
+2. `data-luna-scale="1"` on `<html>`.
+3. `.luna-canvas-row` height should be **912px** (`57rem × 16px`).
+4. Center stage should be **1360×765** (`85×47.8125 rem`).
 
 ---
 

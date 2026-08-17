@@ -1,45 +1,20 @@
 {
-  "name": "waypoint-steps",
+  "name": "wp2.0-steps",
   "private": true,
-  "version": "0.0.0",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/AceConcept/waypoint-empty-v2.git"
-  },
-  "homepage": "https://github.com/AceConcept/waypoint-empty-v2",
+  "version": "0.1.0",
   "type": "module",
   "engines": {
     "node": ">=20.17.0"
   },
   "scripts": {
-    "build:slot": "npm install --prefix steps-project-slot --no-audit --no-fund && npm run build --prefix steps-project-slot",
-    "dev:slot": "npm run dev --prefix steps-project-slot -- --port 5174 --strictPort",
     "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "eslint .",
+    "build": "vite build",
     "preview": "vite preview"
   },
-  "dependencies": {
-    "@fontsource/inter": "^5.2.8",
-    "@fontsource/manrope": "^5.2.8",
-    "framer-motion": "^12.39.0",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "waypoint-sidebar": "file:./vendor/waypoint-sidebar",
-    "zustand": "^5.0.12"
-  },
   "devDependencies": {
-    "@eslint/js": "^9.39.4",
-    "@types/node": "^24.12.0",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.1",
-    "eslint": "^9.39.4",
-    "eslint-plugin-react-hooks": "^7.0.1",
-    "eslint-plugin-react-refresh": "^0.5.2",
-    "globals": "^17.4.0",
-    "typescript": "~5.9.3",
-    "typescript-eslint": "^8.57.0",
-    "vite": "^8.0.1"
+    "vite": "^6.3.5"
+  },
+  "dependencies": {
+    "motion": "^13.1.0"
   }
 }
