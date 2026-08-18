@@ -2,9 +2,12 @@ import { animate, stagger } from 'motion'
 import { bindDocumentScale } from './scale.js'
 import { WAYPOINT_PROJECTS } from './data/projects.js'
 import {
-  FLOW_SIDEBAR_ITEMS,
-  FLOW_STEPS,
+  DEFAULT_PROJECT_ID,
+  embedExtrasForStep,
+  flowSidebarItemsFor,
+  flowStepsFor,
   getStageEmbedOrigin,
+  getWaypointMode,
   polarFlowIdFromHash,
   STAGE_PLACEHOLDER_IMAGE,
   STAGE_PREVIEW_IMAGES,
@@ -15,6 +18,7 @@ import {
   postStageEmbedStep,
   registerStageEmbedFrame,
   requestStageEmbedStep,
+  setEmbedProjectId,
   STAGE_EMBED_STEP_CHANGED,
 } from './embed-bridge.js'
 import './styles/main.css'
@@ -41,12 +45,12 @@ const state = {
   mounted: false,
   loaded: false,
   loadProgress: 0,
-  stepId: polarFlowIdFromHash(window.location.hash),
+  stepId: polarFlowIdFromHash(window.location.hash, DEFAULT_PROJECT_ID),
   headerMode: 'information', // 'information' | 'waypoint-select'
   panelTransitioning: false,
   pendingHeaderMode: null,
   chromeDirty: false,
-  projectId: 'steps-waypoint',
+  projectId: DEFAULT_PROJECT_ID,
   managerOpen: false,
   fullscreenOpen: false,
   stageEmbedVisible: true,
@@ -58,12 +62,21 @@ const state = {
   pendingEmbedSrc: null,
 }
 
+function flowSteps() {
+  return flowStepsFor(state.projectId)
+}
+
+function sidebarItems() {
+  return flowSidebarItemsFor(state.projectId)
+}
+
 function currentStep() {
-  return FLOW_STEPS.find((s) => s.id === state.stepId) ?? FLOW_STEPS[0]
+  const steps = flowSteps()
+  return steps.find((s) => s.id === state.stepId) ?? steps[0]
 }
 
 function currentStepIndex() {
-  return Math.max(0, FLOW_STEPS.findIndex((s) => s.id === state.stepId))
+  return Math.max(0, flowSteps().findIndex((s) => s.id === state.stepId))
 }
 
 function currentStageImage() {
@@ -118,7 +131,8 @@ function crumbSlug(value) {
 }
 
 function ensureEmbedUrls() {
-  const src = stageEmbedUrlForStep(state.stepId)
+  setEmbedProjectId(state.projectId)
+  const src = stageEmbedUrlForStep(state.projectId, state.stepId)
   if (!state.embedUrls[0]) {
     state.embedUrls = [src, src]
     return
@@ -136,7 +150,7 @@ function ensureEmbedUrls() {
 }
 
 function goToStep(id, { syncHash = true } = {}) {
-  if (!FLOW_STEPS.some((s) => s.id === id)) return
+  if (!flowSteps().some((s) => s.id === id)) return
   if (state.stepId === id) {
     state.managerOpen = false
     patchChrome()
@@ -164,13 +178,15 @@ function goToStep(id, { syncHash = true } = {}) {
     patchChrome()
   }
   patchFullscreen()
-  if (useStageIframe()) postStageEmbedStep(currentStepIndex() + 1)
+  if (useStageIframe()) {
+    postStageEmbedStep(currentStepIndex() + 1, embedExtrasForStep(state.projectId, state.stepId))
+  }
 }
 
 function onEmbedReady(slot) {
   if (state.pendingEmbedSlot !== slot) {
     if (slot === state.embedSlot) {
-      postStageEmbedStep(currentStepIndex() + 1)
+      postStageEmbedStep(currentStepIndex() + 1, embedExtrasForStep(state.projectId, state.stepId))
     }
     return
   }
@@ -179,7 +195,7 @@ function onEmbedReady(slot) {
   state.pendingEmbedSlot = null
   state.pendingEmbedSrc = null
   syncEmbedLayers()
-  postStageEmbedStep(currentStepIndex() + 1)
+  postStageEmbedStep(currentStepIndex() + 1, embedExtrasForStep(state.projectId, state.stepId))
 }
 
 function syncEmbedLayers() {
@@ -197,7 +213,7 @@ function managerMenuHtml() {
   return `
     <div class="navbar-manager-menu wp-sidebar__preview">
       <div class="wp-sidebar__preview-steps">
-        ${FLOW_SIDEBAR_ITEMS.map(
+        ${sidebarItems().map(
           (card, index) => `
           <button type="button" class="wp-sidebar__card${card.id === state.stepId ? ' is-active' : ''}" data-action="select-step" data-step="${card.id}" role="menuitem" aria-pressed="${card.id === state.stepId}">
             <span class="wp-sidebar__card-media" style="background-color:${card.swatch}">
@@ -335,7 +351,7 @@ function stepsInfoPanel() {
               </div>
             </div>
             <div class="steps-info__list" role="list">
-              ${FLOW_STEPS.map(
+              ${flowSteps().map(
                 (s, i) => `
                 <button
                   type="button"
@@ -380,7 +396,7 @@ function navbarHtml() {
             <ol class="header-status-crumbs">
               <li class="header-status-crumb"><a href="https://www.atencium-ui.com">atencium-ui</a></li>
               <li class="header-status-crumb">
-                <button type="button" data-action="select-step" data-step="1">steps-waypoint</button>
+                <button type="button" data-action="select-step" data-step="1">${getWaypointMode(state.projectId).crumb}</button>
               </li>
               <li class="header-status-crumb is-current" aria-current="page"><span>${crumbSlug(step.title)}</span></li>
             </ol>
@@ -495,7 +511,7 @@ function fullscreenHtml() {
     </div>
   `
   }
-  const src = stageEmbedUrlForStep(state.stepId)
+  const src = stageEmbedUrlForStep(state.projectId, state.stepId)
   return `
     <div class="luna-fullscreen-overlay" data-region="fullscreen" role="dialog" aria-modal="true" aria-label="Full screen preview">
       <button type="button" class="luna-fullscreen-overlay__backdrop" data-action="close-fullscreen" aria-label="Close full screen"></button>
@@ -742,36 +758,58 @@ function animateProjectSwap(activating, deactivating) {
 
 function selectProject(id) {
   if (!WAYPOINT_PROJECTS.some((p) => p.id === id)) return
-  if (state.projectId === id) return
+  const same = state.projectId === id
+  if (same && useStageIframe()) return
 
   const prevId = state.projectId
-  state.projectId = id
+  if (!same) {
+    state.projectId = id
+    state.stepId = flowStepsFor(id)[0].id
+    state.managerOpen = false
+    const hash = `#${state.stepId}`
+    if (window.location.hash !== hash) {
+      const url = new URL(window.location.href)
+      url.hash = hash
+      history.pushState(null, '', url)
+    }
+    state.embedSlot = 0
+    state.embedUrls = ['', '']
+    state.pendingEmbedSlot = null
+    state.pendingEmbedSrc = null
+  }
+
+  setEmbedProjectId(state.projectId)
+  state.stageSource = 'iframe'
+  ensureEmbedUrls()
 
   const list = root.querySelector('.project-select__list')
-  if (!list || state.headerMode !== 'waypoint-select' || state.panelTransitioning) {
+  const canAnimateCards =
+    !same &&
+    list &&
+    state.headerMode === 'waypoint-select' &&
+    !state.panelTransitioning
+
+  if (canAnimateCards) {
+    let activating = null
+    let deactivating = null
+    list.querySelectorAll('.project-select__card').forEach((card) => {
+      const cardId = card.getAttribute('data-project')
+      const nowActive = cardId === id
+      const wasActive = card.classList.contains('is-active')
+      if (nowActive && !wasActive) activating = card
+      if (!nowActive && wasActive) deactivating = card
+      syncProjectCard(card, nowActive)
+    })
+    if (!activating) activating = list.querySelector(`[data-project="${id}"]`)
+    if (!deactivating) deactivating = list.querySelector(`[data-project="${prevId}"]`)
+    animateProjectSwap(activating, deactivating)
+    replaceRegion('[data-region="navbar"]', navbarHtml())
+  } else {
     patchChrome()
-    return
   }
 
-  let activating = null
-  let deactivating = null
-  list.querySelectorAll('.project-select__card').forEach((card) => {
-    const cardId = card.getAttribute('data-project')
-    const nowActive = cardId === id
-    const wasActive = card.classList.contains('is-active')
-    if (nowActive && !wasActive) activating = card
-    if (!nowActive && wasActive) deactivating = card
-    syncProjectCard(card, nowActive)
-  })
-
-  if (!activating) {
-    activating = list.querySelector(`[data-project="${id}"]`)
-  }
-  if (!deactivating) {
-    deactivating = list.querySelector(`[data-project="${prevId}"]`)
-  }
-
-  animateProjectSwap(activating, deactivating)
+  patchStage()
+  patchFullscreen()
 }
 
 function patchChrome() {
@@ -1066,6 +1104,7 @@ function runLoadscreen() {
 }
 
 function boot() {
+  setEmbedProjectId(state.projectId)
   bindDocumentScale()
   preloadProjectSelectAssets()
   mount()
@@ -1074,20 +1113,31 @@ function boot() {
   root.addEventListener('click', onRootClick)
   document.addEventListener('keydown', onKeyDown)
   window.addEventListener('hashchange', () => {
-    goToStep(polarFlowIdFromHash(window.location.hash), { syncHash: false })
+    goToStep(polarFlowIdFromHash(window.location.hash, state.projectId), { syncHash: false })
   })
   window.addEventListener('popstate', () => {
-    goToStep(polarFlowIdFromHash(window.location.hash), { syncHash: false })
+    goToStep(polarFlowIdFromHash(window.location.hash, state.projectId), { syncHash: false })
   })
 
-  const embedOrigin = getStageEmbedOrigin()
   window.addEventListener('message', (event) => {
     if (!useStageIframe()) return
-    if (event.origin !== embedOrigin) return
+    if (event.origin !== getStageEmbedOrigin(state.projectId)) return
     if (event.data?.type !== STAGE_EMBED_STEP_CHANGED) return
-    const n = Number(event.data.step)
-    if (!Number.isFinite(n) || n < 1 || n > FLOW_STEPS.length) return
-    goToStep(String(n))
+    const steps = flowSteps()
+    const fromRoute =
+      typeof event.data.route === 'string'
+        ? polarFlowIdFromHash(`#/${event.data.route}`, state.projectId)
+        : null
+    const id =
+      fromRoute && steps.some((s) => s.id === fromRoute)
+        ? fromRoute
+        : Number.isFinite(Number(event.data.step)) &&
+            Number(event.data.step) >= 1 &&
+            Number(event.data.step) <= steps.length
+          ? String(event.data.step)
+          : null
+    if (!id) return
+    goToStep(id)
   })
 
   window.setInterval(() => {

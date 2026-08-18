@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "wp2-0-steps",
+  "name": "waypoint-origin",
   "compatibility_date": "2026-08-17",
   "build": {
     "command": "npm run build"
